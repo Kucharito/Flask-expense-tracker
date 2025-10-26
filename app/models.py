@@ -37,5 +37,6 @@ class Budget(db.Model):
     category = db.Column(db.String(100), nullable=False)
     limit = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    notified_over_limit = db.Column(db.Boolean, default=False)
 
 

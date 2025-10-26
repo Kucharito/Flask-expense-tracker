@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
-
-
+from app.email_utils import send_limit_warning_email
 
 budgets_bp = Blueprint('budgets', __name__, url_prefix='/budgets')
 
@@ -36,15 +35,53 @@ def list_budgets():
             Expense.category == b.category
         ).scalar() or 0
 
-    remaining = float(b.limit) - total_spent
-    percent_used = (total_spent / b.limit * 100) if b.limit > 0 else 0
+        limit = float(b.limit) if b.limit is not None else 0
+        remaining = float(b.limit) - total_spent
+        percent_used = (total_spent / b.limit * 100) if b.limit > 0 else 0
 
-    budgets_data.append({
-        'category': b.category,
-        'limit': b.limit,
-        'total_spent': total_spent,
-        'remaining': remaining,
-        'percent_used': percent_used
-    })
+        if percent_used>=100 and not b.notified_over_limit:
+            send_limit_warning_email(
+                user_email=current_user.email,
+                category=b.category,
+                total_spent=total_spent,
+                limit=b.limit
+            )
+            b.notified_over_limit = True
+            db.session.commit()
+
+        if limit > 0 and percent_used >= 100:
+            status = 'over'
+            warning_msg = f'Warning: You have exceeded your budget for {b.category}!'
+            flash(warning_msg, 'error')
+        elif limit > 0 and percent_used >= 80:
+            status = 'warning'
+            warning_msg = f'Alert: You are nearing your budget limit for {b.category}.'
+            flash(warning_msg, 'warning')
+        else:
+            status = 'ok'
+
+
+
+
+        budgets_data.append({
+            'category': b.category,
+            'limit': b.limit,
+            'total_spent': total_spent,
+            'remaining': remaining,
+            'percent_used': percent_used
+        })
 
     return render_template('budgets_dashboard.html', budgets=budgets_data, form=form)
+
+@budgets_bp.route('/test-email')
+@login_required
+def test_email():
+    from app.email_utils import send_limit_warning_email
+    send_limit_warning_email(
+        user_email=current_user.email,
+        category='Test Category',
+        total_spent=150,
+        limit=100
+    )
+    flash('Test email sent!', 'info')
+    return redirect(url_for('budgets.list_budgets'))
