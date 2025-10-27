@@ -60,7 +60,12 @@ def list_budgets():
         else:
             status = 'ok'
 
+        total_budget = sum(b.limit for b in budgets)
+        total_expenses = db.session.query(func.sum(Expense.amount)).filter(
+            Expense.user_id == current_user.id
+        ).scalar() or 0
 
+        remaining_overall = total_budget - total_expenses if total_budget > 0 else 0
 
 
         budgets_data.append({
@@ -71,7 +76,7 @@ def list_budgets():
             'percent_used': percent_used
         })
 
-    return render_template('budgets_dashboard.html', budgets=budgets_data, form=form)
+    return render_template('budgets_dashboard.html', budgets=budgets_data, form=form, total_budget=total_budget, total_spent=total_expenses, remaining_overall=remaining_overall)
 
 @budgets_bp.route('/test-email')
 @login_required

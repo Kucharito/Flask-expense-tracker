@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from flask_mail import Mail
@@ -51,6 +51,17 @@ def create_app():
     @app.route('/')
     def index():
         from flask import render_template
-        return render_template('index.html')
+        overview = None
+        if current_user.is_authenticated:
+            from app.models import Expense, Budget
+            total_spent = db.session.query(db.func.sum(Expense.amount)).filter(Expense.user_id == current_user.id).scalar() or 0
+            total_budget = db.session.query(db.func.sum(Budget.limit)).filter(Budget.user_id == current_user.id).scalar() or 0
+            remaining = total_budget - total_spent if total_budget > 0 else None
+            overview = {
+                'total_spent': total_spent,
+                'total_budget': total_budget,
+                'remaining': remaining
+            }
+        return render_template('index.html', overview=overview)
 
     return app

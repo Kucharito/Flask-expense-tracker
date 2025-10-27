@@ -23,6 +23,25 @@
     </form>
 </div>
 
+{% if total_budget > 0 %}
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h4 class="text-lg font-semibold mb-2">Total Budget</h4>
+        <p class="text-2xl font-bold">€{{ total_budget }}</p>
+    </div>
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h4 class="text-lg font-semibold mb-2">Total Spent</h4>
+        <p class="text-2xl font-bold">€{{ total_spent }}</p>
+    </div>
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h4 class="text-lg font-semibold mb-2">Remaining</h4>
+        <p class="text-2xl font-bold">€{{ remaining_overall }}</p>
+    </div>
+</div>
+{% else %}
+<p class="text-center text-gray-600 mb-6">No budgets set. Please add a budget to get started.</p>
+{% endif %}
+
 <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
     <thead class="bg-gray-200 text-gray-700 uppercase text-sm">
         <tr>

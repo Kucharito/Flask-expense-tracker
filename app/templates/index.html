@@ -44,5 +44,19 @@
   </div>
 </section>
 
+{% if overview %}
+<div class="mt-8 text-center">
+  <h3 class="text-lg font-semibold">Your financial summary</h3>
+  <p class="text-gray-600 mt-2">
+    You've spent <span class="font-bold">{{ overview.total_spent }}€</span> so far.
+    {% if overview.remaining is not none %}
+    You have <span class="font-bold">{{ overview.remaining }}€</span> remaining.
+    {% else %}
+    Set a budget to track your limits.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+
 
 {% endblock %}
