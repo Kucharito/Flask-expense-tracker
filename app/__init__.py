@@ -6,6 +6,8 @@ from flask_mail import Mail
 from dotenv import load_dotenv
 import os
 
+from app.notifications import notifications_bp
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -47,6 +49,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(expenses_bp)
     app.register_blueprint(budgets_bp)
+    app.register_blueprint(notifications_bp)
 
     @app.route('/')
     def index():

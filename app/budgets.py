@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app.email_utils import send_limit_warning_email
+from app.notifications_utils import create_notification
 
 budgets_bp = Blueprint('budgets', __name__, url_prefix='/budgets')
 
@@ -46,6 +47,9 @@ def list_budgets():
                 total_spent=total_spent,
                 limit=b.limit
             )
+
+            create_notification(user_id=current_user.id,message = f'You have exceeded your budget for {b.category}!',type='warning')
+
             b.notified_over_limit = True
             db.session.commit()
 

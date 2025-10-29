@@ -21,6 +21,15 @@
                 <a href="{{ url_for('expenses.list_expenses') }}" class="hover:underline"><b>Dashboard</b></a>
                 <a href="{{ url_for('budgets.list_budgets') }}" class="hover:underline"><b>Budgets</b></a>
                 <a href="{{ url_for('auth.logout') }}" class="hover:underline"><b>Logout</b></a>
+                <a href="{{ url_for('notifications.list_notifications') }}" class="relative">
+                  🔔
+                  {% if current_user.is_authenticated and current_user.notifications|selectattr('read', 'equalto', False)|list|length > 0 %}
+                    <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                      {{ current_user.notifications|selectattr('read', 'equalto', False)|list|length }}
+                    </span>
+                  {% endif %}
+                </a>
+
             {% else %}
                 <a href="{{ url_for('auth.login') }}" class="hover:underline"><b>Login</b></a>
                 <a href="{{ url_for('auth.register') }}" class="hover:underline"><b>Register</b></a>
