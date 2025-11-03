@@ -57,13 +57,21 @@
 </table>
 
 <h3 class="text-xl font-semibold mt-10 mb-4 text-center">Expense Summary by Category</h3>
-<div class="flex justify-center mb-10">
-<canvas id="expensesChart"
-        class="max-w-2xl w-full"
-        data-url="{{ url_for('expenses.chart_data') }}">
-</canvas>
+<div class="flex justify-center mb-4">
+    <button id="button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+        Bar Chart</button>
+    <button id="button2" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded ml-4">
+        Pie Chart</button>
 </div>
 
+<div class="flex justify-center mb-10">
+    <canvas id="expensesChart"
+        width="400" height="400"
+        class="rounded-lg shadow-lg"
+        data-url="{{ url_for('expenses.chart_data') }}">
+</canvas>
+
+</div>
 
 <div class="mt-6">
     <a href="{{ url_for('expenses.add_expenses') }}"
@@ -83,6 +91,7 @@
 
 {% endif %}
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='expenses_chart.js') }}"></script>
 
 </script>
