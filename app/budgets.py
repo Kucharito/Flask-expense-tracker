@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
@@ -16,10 +17,17 @@ def list_budgets():
     from sqlalchemy import func
     from app.forms import BudgetForm
     from app.models import Expense
-
     form = BudgetForm()
     budgets = Budget.query.filter_by(user_id=current_user.id).all()
 
+    # ✅ VÝPOČET MIMO CYKLU
+    total_budget = sum(float(b.limit) for b in budgets) if budgets else 0
+    total_expenses = db.session.query(func.sum(Expense.amount)).filter(
+        Expense.user_id == current_user.id
+    ).scalar() or 0
+    remaining_overall = total_budget - total_expenses if total_budget > 0 else 0
+
+    # ✅ Spracovanie formulára
     if form.validate_on_submit():
         new_budget = Budget(
             category=form.category.data,
@@ -28,7 +36,11 @@ def list_budgets():
         )
         db.session.add(new_budget)
         db.session.commit()
-        notify_user(current_user.id,f'New budget set for {form.category.data} with limit {form.limit.data}.','info')
+        notify_user(
+            current_user.id,
+            f'New budget set for {form.category.data} with limit {form.limit.data}.',
+            'info'
+        )
         return redirect(url_for('budgets.list_budgets'))
 
     budgets_data = []
@@ -38,10 +50,11 @@ def list_budgets():
             Expense.category == b.category
         ).scalar() or 0
 
-        limit = float(b.limit) if b.limit is not None else 0
-        remaining = float(b.limit) - total_spent
-        percent_used = (total_spent / b.limit * 100) if b.limit > 0 else 0
+        limit = float(b.limit) if b.limit else 0
+        remaining = limit - total_spent
+        percent_used = (total_spent / limit * 100) if limit > 0 else 0
 
+        # ✅ hlavná logika notifikácií
         if percent_used >= 100 and not b.notified_over_limit:
             if not b.last_email_sent or (datetime.utcnow() - b.last_email_sent) > timedelta(minutes=10):
                 send_limit_warning_email(
@@ -51,32 +64,22 @@ def list_budgets():
                     limit=b.limit
                 )
                 b.last_email_sent = datetime.utcnow()
-                db.session.commit()
 
             notify_user(current_user.id, f'You have exceeded your budget for {b.category}!', 'warning')
             b.notified_over_limit = True
+            b.notified_near_limit = True
+            db.session.commit()
+            time.sleep(0.7)
+
+        elif percent_used >= 80 and not b.notified_near_limit:
+            notify_user(current_user.id, f'You are nearing your budget limit for {b.category}.', 'warning')
+            b.notified_near_limit = True
             db.session.commit()
 
-
-        elif limit > 0 and percent_used >= 80:
-            status = 'warning'
-            b.notified_near_limit = True
-            notify_user(current_user.id, f'You are nearing your budget limit for {b.category}.', 'warning')
-        elif percent_used < 80:
+        elif percent_used < 80 and (b.notified_near_limit or b.notified_over_limit):
             b.notified_near_limit = False
             b.notified_over_limit = False
             db.session.commit()
-        else:
-            status = 'ok'
-
-
-        total_budget = sum(b.limit for b in budgets)
-        total_expenses = db.session.query(func.sum(Expense.amount)).filter(
-            Expense.user_id == current_user.id
-        ).scalar() or 0
-
-        remaining_overall = total_budget - total_expenses if total_budget > 0 else 0
-
 
         budgets_data.append({
             'category': b.category,
@@ -86,8 +89,15 @@ def list_budgets():
             'percent_used': percent_used
         })
 
-    return render_template('budgets_dashboard.html', budgets=budgets_data, form=form, total_budget=total_budget, total_spent=total_expenses, remaining_overall=remaining_overall)
-
+    # ✅ tieto premenné už určite existujú
+    return render_template(
+        'budgets_dashboard.html',
+        budgets=budgets_data,
+        form=form,
+        total_budget=total_budget,
+        total_spent=total_expenses,
+        remaining_overall=remaining_overall
+    )
 @budgets_bp.route('/test-email')
 @login_required
 def test_email():

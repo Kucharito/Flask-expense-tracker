@@ -39,6 +39,7 @@ class Budget(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     notified_over_limit = db.Column(db.Boolean, default=False)
     notified_near_limit = db.Column(db.Boolean, default=False)
+    last_email_sent = db.Column(db.DateTime, nullable =True)
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
