@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app.email_utils import send_limit_warning_email
-from app.notifications_utils import create_notification
+from app.notifications_utils import create_notification, notify_user
 
 budgets_bp = Blueprint('budgets', __name__, url_prefix='/budgets')
 
@@ -26,7 +28,7 @@ def list_budgets():
         )
         db.session.add(new_budget)
         db.session.commit()
-        flash('Budget added successfully!', 'success')
+        notify_user(current_user.id,f'New budget set for {form.category.data} with limit {form.limit.data}.','info')
         return redirect(url_for('budgets.list_budgets'))
 
     budgets_data = []
@@ -40,29 +42,33 @@ def list_budgets():
         remaining = float(b.limit) - total_spent
         percent_used = (total_spent / b.limit * 100) if b.limit > 0 else 0
 
-        if percent_used>=100 and not b.notified_over_limit:
-            send_limit_warning_email(
-                user_email=current_user.email,
-                category=b.category,
-                total_spent=total_spent,
-                limit=b.limit
-            )
+        if percent_used >= 100 and not b.notified_over_limit:
+            if not b.last_email_sent or (datetime.utcnow() - b.last_email_sent) > timedelta(minutes=10):
+                send_limit_warning_email(
+                    user_email=current_user.email,
+                    category=b.category,
+                    total_spent=total_spent,
+                    limit=b.limit
+                )
+                b.last_email_sent = datetime.utcnow()
+                db.session.commit()
 
-            create_notification(user_id=current_user.id,message = f'You have exceeded your budget for {b.category}!',type='warning')
-
+            notify_user(current_user.id, f'You have exceeded your budget for {b.category}!', 'warning')
             b.notified_over_limit = True
             db.session.commit()
 
-        if limit > 0 and percent_used >= 100:
-            status = 'over'
-            warning_msg = f'Warning: You have exceeded your budget for {b.category}!'
-            flash(warning_msg, 'error')
+
         elif limit > 0 and percent_used >= 80:
             status = 'warning'
-            warning_msg = f'Alert: You are nearing your budget limit for {b.category}.'
-            flash(warning_msg, 'warning')
+            b.notified_near_limit = True
+            notify_user(current_user.id, f'You are nearing your budget limit for {b.category}.', 'warning')
+        elif percent_used < 80:
+            b.notified_near_limit = False
+            b.notified_over_limit = False
+            db.session.commit()
         else:
             status = 'ok'
+
 
         total_budget = sum(b.limit for b in budgets)
         total_expenses = db.session.query(func.sum(Expense.amount)).filter(

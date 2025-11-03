@@ -38,6 +38,7 @@ class Budget(db.Model):
     limit = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     notified_over_limit = db.Column(db.Boolean, default=False)
+    notified_near_limit = db.Column(db.Boolean, default=False)
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -45,7 +46,7 @@ class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     message = db.Column(db.String(255), nullable=False)
-    type = db.Column(db.String(50), default = 'info')  # e.g., 'warning', 'info'
+    type = db.Column(db.String(50), default = 'info')
     read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
